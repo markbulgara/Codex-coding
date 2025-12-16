@@ -32,6 +32,16 @@ A small command-line tool that fetches a web page and reports any video URLs who
 
 Any candidates whose URL or nearby text contains one of the provided keywords are listed once with a brief context snippet.
 
+### Motherless support
+
+When you point the scraper at `motherless.com`, it applies extra heuristics to surface videos that may not be discoverable via the site's search box:
+
+- Captures Motherless-specific 6-character video IDs from thumbnail links and containers with `data-video-id` attributes.
+- Associates nearby titles/alt text to each discovered video so your keywords can still match even if the page hides the text itself.
+- Combines the Motherless findings with the generic video detectors to avoid missing direct media URLs embedded on video pages.
+
+Provide the Motherless page (e.g., a gallery, user profile, or group) and the keywords you want; the tool will return matching video URLs whether or not they're searchable on the site.
+
 ## Working with local HTML
 
 For testing, you can scan a local HTML file by prefixing the path with `file://`:

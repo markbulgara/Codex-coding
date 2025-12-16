@@ -6,7 +6,7 @@ import re
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Iterable, List, Sequence
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 import requests
 from bs4 import BeautifulSoup
@@ -14,6 +14,7 @@ from bs4 import BeautifulSoup
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".webm", ".ogg", ".ogv", ".m4v"}
 VIDEO_HOST_HINTS = ("youtube.com", "youtu.be", "vimeo.com", "dailymotion.com")
+MOTHERLESS_VIDEO_PATH = re.compile(r"^/[A-Z0-9]{6}$")
 
 
 @dataclass
@@ -133,6 +134,64 @@ def collect_candidates(soup: BeautifulSoup, base_url: str) -> List[VideoMatch]:
                         source="<meta> tag",
                     )
                 )
+
+    return candidates
+
+
+def collect_motherless_candidates(soup: BeautifulSoup, base_url: str) -> List[VideoMatch]:
+    """Extract video links and IDs using Motherless-specific markup.
+
+    Motherless video pages follow predictable 6-character alphanumeric paths
+    (e.g., /AB12CD). They often appear in thumbnail grids as <a> elements or
+    wrappers with data-video-id attributes. We collect those and attach nearby
+    text/attribute context to improve keyword matching.
+    """
+
+    candidates: list[VideoMatch] = []
+    parsed_base = urlparse(base_url)
+    base_for_join = f"{parsed_base.scheme}://{parsed_base.netloc}" if parsed_base.scheme else base_url
+
+    for link in soup.find_all("a", href=True):
+        href = link["href"]
+        path = urlparse(href).path
+        if not path:
+            continue
+        if not MOTHERLESS_VIDEO_PATH.match(path):
+            continue
+
+        url = urljoin(base_for_join, href)
+        context_pieces = [build_context_text(link)]
+        img = link.find("img")
+        if img:
+            context_pieces.append(build_context_text(img))
+
+        context = " ".join(piece for piece in context_pieces if piece)
+        candidates.append(
+            VideoMatch(
+                url=url,
+                matched_keywords=[],
+                context=context,
+                source="Motherless thumbnail/link",
+            )
+        )
+
+    for container in soup.find_all(attrs={"data-video-id": True}):
+        video_id = str(container.get("data-video-id", "")).strip()
+        if not video_id:
+            continue
+        path = f"/{video_id}"
+        if not MOTHERLESS_VIDEO_PATH.match(path):
+            continue
+
+        url = urljoin(base_for_join, path)
+        candidates.append(
+            VideoMatch(
+                url=url,
+                matched_keywords=[],
+                context=build_context_text(container),
+                source="Motherless data-video-id",
+            )
+        )
 
     return candidates
 
@@ -261,6 +320,12 @@ def prompt_for_keywords(current: Sequence[str]) -> List[str]:
         print("Please enter at least one keyword.")
 
 
+def is_motherless_domain(url: str) -> bool:
+    parsed = urlparse(url)
+    host = parsed.netloc.lower()
+    return host.endswith("motherless.com")
+
+
 def main() -> None:
     config = parse_args()
 
@@ -272,6 +337,8 @@ def main() -> None:
     soup = BeautifulSoup(html, "html.parser")
 
     candidates = collect_candidates(soup, base_url=target_url)
+    if is_motherless_domain(target_url):
+        candidates.extend(collect_motherless_candidates(soup, base_url=target_url))
     matches = filter_matches(candidates, keyword_list)
 
     output_data = {
