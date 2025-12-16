@@ -14,7 +14,7 @@ from bs4 import BeautifulSoup
 
 VIDEO_EXTENSIONS = {".mp4", ".mkv", ".mov", ".webm", ".ogg", ".ogv", ".m4v"}
 VIDEO_HOST_HINTS = ("youtube.com", "youtu.be", "vimeo.com", "dailymotion.com")
-MOTHERLESS_VIDEO_PATH = re.compile(r"^/[A-Z0-9]{6}$")
+MOTHERLESS_VIDEO_PATH = re.compile(r"^/[A-Za-z0-9]{6}$", re.IGNORECASE)
 
 
 @dataclass
@@ -151,6 +151,25 @@ def collect_motherless_candidates(soup: BeautifulSoup, base_url: str) -> List[Vi
     parsed_base = urlparse(base_url)
     base_for_join = f"{parsed_base.scheme}://{parsed_base.netloc}" if parsed_base.scheme else base_url
 
+    def nearby_text(element) -> str:
+        pieces: list[str] = []
+
+        # Immediate siblings (common structure: <a> followed by <div class="title">)
+        for sibling in list(element.previous_siblings)[-2:] + list(element.next_siblings)[:2]:
+            if hasattr(sibling, "get_text"):
+                text = sibling.get_text(strip=True)
+                if text:
+                    pieces.append(text)
+
+        # Parent container text often holds the visible title/description
+        parent = element.parent
+        if parent:
+            parent_text = parent.get_text(strip=True)
+            if parent_text:
+                pieces.append(parent_text)
+
+        return " ".join(pieces)
+
     for link in soup.find_all("a", href=True):
         href = link["href"]
         path = urlparse(href).path
@@ -160,7 +179,7 @@ def collect_motherless_candidates(soup: BeautifulSoup, base_url: str) -> List[Vi
             continue
 
         url = urljoin(base_for_join, href)
-        context_pieces = [build_context_text(link)]
+        context_pieces = [build_context_text(link), nearby_text(link)]
         img = link.find("img")
         if img:
             context_pieces.append(build_context_text(img))
@@ -184,11 +203,17 @@ def collect_motherless_candidates(soup: BeautifulSoup, base_url: str) -> List[Vi
             continue
 
         url = urljoin(base_for_join, path)
+        context = " ".join(
+            piece
+            for piece in [build_context_text(container), nearby_text(container)]
+            if piece
+        )
+
         candidates.append(
             VideoMatch(
                 url=url,
                 matched_keywords=[],
-                context=build_context_text(container),
+                context=context,
                 source="Motherless data-video-id",
             )
         )
