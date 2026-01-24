@@ -26,3 +26,6 @@ Provide an implementation of `PlayerDirectory` so the mod can resolve online pla
 - `/party decline <partyId>`
 - `/party leave`
 - `/party markers`
+
+## Build (Windows)
+Run `build.bat` to compile the Java sources and package `party-marker-sync.jar` in the repository root.
