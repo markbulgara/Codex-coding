@@ -1,0 +1,6 @@
+{
+  "name": "party-marker-sync",
+  "version": "0.1.0",
+  "entrypoint": "com.example.hytale.party.PartyMod",
+  "description": "Syncs map markers between party members and adds a party invite system."
+}
