@@ -28,4 +28,4 @@ Provide an implementation of `PlayerDirectory` so the mod can resolve online pla
 - `/party markers`
 
 ## Build (Windows)
-Run `build.bat` to compile the Java sources and package `party-marker-sync.jar` in the repository root.
+Run `build.bat` to compile the Java sources and package `party-marker-sync.jar` in the repository root. The script also embeds `mod.json` into the jar so the game can discover the mod.
