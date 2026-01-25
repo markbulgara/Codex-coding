@@ -19,12 +19,6 @@ if errorlevel 1 (
   exit /b 1
 )
 
-copy /Y mod.json "%OUT_DIR%" >nul
-if errorlevel 1 (
-  echo Failed to copy mod.json.
-  exit /b 1
-)
-
 jar --create --file "%JAR_NAME%" -C "%OUT_DIR%" .
 if errorlevel 1 (
   echo Jar packaging failed.

@@ -28,4 +28,9 @@ Provide an implementation of `PlayerDirectory` so the mod can resolve online pla
 - `/party markers`
 
 ## Build (Windows)
-Run `build.bat` to compile the Java sources and package `party-marker-sync.jar` in the repository root. The script also embeds `mod.json` into the jar so the game can discover the mod.
+Run `build.bat` to compile the Java sources and package `party-marker-sync.jar` in the repository root.
+
+## Compatibility Notes (Hytale Modding Overview)
+- Java plugins are packaged as `.jar` files and loaded from the server `plugins/` directory (for example: `/hytale-server/plugins`). Place `party-marker-sync.jar` there to have the server load it.
+- Hytale uses a server-side modding model: players do not install a modded client, and the server distributes content automatically.
+- The modding overview notes Java 25 and Gradle 9.2.0 for server plugin development, so align your toolchain accordingly if you wire this to the official API.
